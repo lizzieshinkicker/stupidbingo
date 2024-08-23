@@ -1,64 +1,74 @@
 use std::time::Instant;
 use rand::prelude::*;
 
+const PLAYERS: usize = 1_000;
+const TRIALS: usize = 100_000;
 
-/////////////////////////////
-/// stupidbingo           ///
-/////////////////////////////
-/// 
-/// (against 10,000 trials)
-/// DEBUG // OPTIMIZED times
-/// 
-/// 1 Player /////////////
-/// 79.001µs // 3.711µs
-/// 
-/// 
-/// 10 Players ///////////////
-/// 399.522µs // 10.976µs
-/// 
-/// 
-/// 100 Players //////////////
-/// 3.526ms // 81.003µs
-/// 
-/////////////////////////////////
+const INCLUDE_DIAGONALS: bool = false;
+const INCLUDE_FREE_SPACES: bool = false;
+const SHOW_FULL_BALL_HISTOGRAM: bool = true;
 
-const PLAYERS: usize = 10_000_000;
-const TRIALS: usize = 100;
+////////////////////////////////////////////
 
-const BINGOS: [u32; 12] = [
-    //FREE SPACE
+const ALL_BINGOS: [u32; 44] = [
+//B_DI_FREE
     //VERTICALS
-    0b0000000000000000000011111,
-    0b0000000000000001111100000,
-    0b0000000000110110000000000,
-    0b0000011111000000000000000,
-    0b1111100000000000000000000,
+    0b0000000000000000000011111,  //00
+    0b0000000000000001111100000,  //01
+    0b0000000000110110000000000,  //02
+    0b0000011111000000000000000,  //03
+    0b1111100000000000000000000,  //04
     //HORIZONTALS
-    0b0000100001000010000100001,
-    0b0001000010000100001000010,
-    0b0010000100000000010000100,
-    0b0100001000010000100001000,
-    0b1000010000100001000010000,
+    0b0000100001000010000100001,  //05
+    0b0001000010000100001000010,  //06
+    0b0010000100000000010000100,  //07
+    0b0100001000010000100001000,  //08
+    0b1000010000100001000010000,  //09
     //DIAGONALS
-    0b1000001000000000001000001,
-    0b0000100010000000100010000
-
-    // NO FREE SPACE
+    0b1000001000000000001000001,  //10
+    0b0000100010000000100010000,  //11
+//B_DI_NOFREE
     // VERTICALS
-    // 0b0000000000000000000011111,
-    // 0b0000000000000001111100000,
-    // 0b0000000000111110000000000,
-    // 0b0000011111000000000000000,
-    // 0b1111100000000000000000000,
-    // HORIZONTALS
-    // 0b0000100001000010000100001,
-    // 0b0001000010000100001000010,
-    // 0b0010000100001000010000100,
-    // 0b0100001000010000100001000,
-    // 0b1000010000100001000010000,
+    0b0000000000000000000011111,  //12
+    0b0000000000000001111100000,  //13
+    0b0000000000111110000000000,  //14
+    0b0000011111000000000000000,  //15
+    0b1111100000000000000000000,  //16
+    //HORIZONTALS
+    0b0000100001000010000100001,  //17
+    0b0001000010000100001000010,  //18
+    0b0010000100001000010000100,  //19
+    0b0100001000010000100001000,  //20
+    0b1000010000100001000010000,  //21
     // DIAGONALS
-    // 0b1000001000001000001000001,
-    // 0b0000100010001000100010000
+    0b1000001000001000001000001,  //22
+    0b0000100010001000100010000,  //23
+//B_NODI_FREE
+    //VERTICALS
+    0b0000000000000000000011111,  //24
+    0b0000000000000001111100000,  //25
+    0b0000000000110110000000000,  //26
+    0b0000011111000000000000000,  //27
+    0b1111100000000000000000000,  //28
+    //HORIZONTALS
+    0b0000100001000010000100001,  //29
+    0b0001000010000100001000010,  //30
+    0b0010000100000000010000100,  //31
+    0b0100001000010000100001000,  //32
+    0b1000010000100001000010000,  //33
+//B_NODI_NOFREE
+    // VERTICALS
+    0b0000000000000000000011111,  //34
+    0b0000000000000001111100000,  //35
+    0b0000000000111110000000000,  //36
+    0b0000011111000000000000000,  //37
+    0b1111100000000000000000000,  //38
+    //HORIZONTALS
+    0b0000100001000010000100001,  //39
+    0b0001000010000100001000010,  //40
+    0b0010000100001000010000100,  //41
+    0b0100001000010000100001000,  //42
+    0b1000010000100001000010000,  //43
 ];
 
 struct Card {
@@ -67,6 +77,18 @@ struct Card {
 }
 
 fn main() {
+    let mut test_bingos: Vec<u32> = ALL_BINGOS.to_vec();
+
+    if INCLUDE_DIAGONALS {
+        if INCLUDE_FREE_SPACES { test_bingos = (&test_bingos[0..=11]).to_vec(); }
+        else { test_bingos = (&test_bingos[12..=23]).to_vec(); }
+    } else {
+        if INCLUDE_FREE_SPACES { test_bingos = (&test_bingos[24..=33]).to_vec(); }
+        else { test_bingos = (&test_bingos[34..]).to_vec(); }
+    }
+
+    println!("testing {} possible bingos",test_bingos.len());
+
     let mut rng = thread_rng();
     let start_time = Instant::now();
 
@@ -77,8 +99,14 @@ fn main() {
 
     let mut win_kinds: Vec<u32> = Vec::new();
 
-    for _ in BINGOS {
+    let mut ball_histogram: Vec<u32> = Vec::new();
+
+    for _ in &test_bingos {
         win_kinds.push(0);
+    }
+
+    for _ in 0..75 {
+        ball_histogram.push(0);
     }
 
     'new_game: for trial in 1..=TRIALS {
@@ -113,15 +141,21 @@ fn main() {
 
         for b in balls {
             ball_count += 1;
+
+            let bmin: usize = (b - 1).into();
+
+            ball_histogram[bmin] += 1;
+
+
             for c in &mut cards {
                 if c.spaces.contains(&b) {
                     let power = u32::try_from(c.spaces.iter().position(|&x| x == b).unwrap()).ok().unwrap();
                     c.value += 2_u32.pow(power);
-                    for b in BINGOS {
-                        if b == (b & c.value){
+                    for b in &test_bingos {
+                        if *b == (b & c.value){
                             game_will_end = true;
-                            for t in 0..BINGOS.len(){
-                                if BINGOS[t] == (BINGOS[t] & c.value) { win_kinds[t] += 1 }
+                            for t in 0..test_bingos.len(){
+                                if test_bingos[t] == (test_bingos[t] & c.value) { win_kinds[t] += 1 }
                             }
                             
                             //continue 'new_game;
@@ -137,11 +171,17 @@ fn main() {
         }
     }
 
-
-
     println!("/// FINISHED! ///");
     println!("{TRIALS} games with {PLAYERS} player(s)");
     println!("/////////////////");
+
+    if INCLUDE_DIAGONALS { println!("-< Including Diagonals >-") }
+    else { println!("-< Not Including Diagonals >-") }
+    if INCLUDE_FREE_SPACES { println!("-< Including Free Spaces >-") }
+    else { println!("-< Not Including Free Spaces >-") }
+
+    println!("/////////////////");
+
     println!("Total time: {:?}",start_time.elapsed());
     println!("Average time per game: {:?}",start_time.elapsed()/TRIALS.try_into().unwrap());
     println!("Shortest game: {} balls", win_after.iter().min().unwrap());
@@ -155,9 +195,13 @@ fn main() {
     let win_kinds_sum: u32 = win_kinds.iter().sum();
     let v_wins: u32 = win_kinds[0..=4].iter().sum();
     let h_wins: u32 = win_kinds[5..=9].iter().sum();
-    let d_wins: u32 = win_kinds[10..].iter().sum();
+    let mut d_wins: u32 = 0;
+    if INCLUDE_DIAGONALS { d_wins = win_kinds[10..].iter().sum(); };
 
     for v in 0..win_kinds.len() {
+        if v == 0 { println!("VERTICALS:") }
+        if v == 5 { println!("HORIZONTALS:") }
+        if v == 10 { println!("DIAGONALS:") }
         println!("Bingo type #{v}: {} ({:.2}%)", win_kinds[v], (win_kinds[v] * 100) as f64 / win_kinds_sum as f64 );
     }
 
@@ -165,7 +209,8 @@ fn main() {
 
     println!("Vertical Wins: {:.2}%",(v_wins * 100) as f64 / win_kinds_sum as f64);
     println!("Horizon. Wins: {:.2}%",(h_wins * 100) as f64 / win_kinds_sum as f64);
-    println!("Diagonal Wins: {:.2}%",(d_wins * 100) as f64 / win_kinds_sum as f64);
+    
+    if INCLUDE_DIAGONALS { println!("Diagonal Wins: {:.2}%",(d_wins * 100) as f64 / win_kinds_sum as f64); };
 
     println!("/////////////////");
 
@@ -176,6 +221,36 @@ fn main() {
             println!("{v}: {count} times");
         }
     }
+
+    println!("///////////////////////");
+    println!("--< Ball Histogram >---");
+    println!("///////////////////////");
+
+    let mut bh_sum: u64 = 0;
+    ball_histogram.iter().for_each(|x| bh_sum = bh_sum + u64::try_from(*x).unwrap() );
+
+    let bh_avg = bh_sum / 75;
+
+    if SHOW_FULL_BALL_HISTOGRAM {
+        for bh in 0..ball_histogram.len() {
+            println!("#{}, {} times -- {:.2}%", bh+1, ball_histogram[bh], (ball_histogram[bh] * 100) as f64 / (bh_sum as f64))
+        }
+    }
+
+    let bh_max = ball_histogram.iter().max().unwrap();
+    let bh_min = ball_histogram.iter().min().unwrap();
+
+    println!("--------------");
+
+    println!(" largest incidence: {bh_max}");
+    println!("smallest incidence: {bh_min}");
+    println!("    for a range of: {}", bh_max - bh_min);
+
+    let bh_dev = (bh_max - bh_min) / 2;
+
+    println!("deviance of +/-{bh_dev}, or +/-{:.3}%", (bh_dev * 100) as f64 / bh_avg as f64);
+
+    println!("--------------");
 }
 
 fn make_new_card(rng: &mut ThreadRng) -> [u8; 25] {
