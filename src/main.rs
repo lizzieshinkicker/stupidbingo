@@ -1,8 +1,8 @@
 use std::time::Instant;
 use rand::prelude::*;
 
-const PLAYERS: usize = 1_000;
-const TRIALS: usize = 100_000;
+const PLAYERS: usize = 1;//_000;
+const TRIALS: usize = 10;//_000;
 
 const INCLUDE_DIAGONALS: bool = false;
 const INCLUDE_FREE_SPACES: bool = false;
@@ -87,7 +87,7 @@ fn main() {
         else { test_bingos = (&test_bingos[34..]).to_vec(); }
     }
 
-    println!("testing {} possible bingos",test_bingos.len());
+    println!("testing {} possible bingos", test_bingos.len());
 
     let mut rng = thread_rng();
     let start_time = Instant::now();
@@ -98,16 +98,10 @@ fn main() {
     let loading_percent = TRIALS / 100;
 
     let mut win_kinds: Vec<u32> = Vec::new();
+    test_bingos.iter().for_each(|_| win_kinds.push(0));
 
     let mut ball_histogram: Vec<u32> = Vec::new();
-
-    for _ in &test_bingos {
-        win_kinds.push(0);
-    }
-
-    for _ in 0..75 {
-        ball_histogram.push(0);
-    }
+    (0..75).for_each(|_| ball_histogram.push(0));
 
     'new_game: for trial in 1..=TRIALS {
 
@@ -119,9 +113,9 @@ fn main() {
         }
 
         let mut cards: Vec<Card> = Vec::new();
-
+        // (0..PLAYERS).for_each(|_| cards.push(Card { spaces: make_new_card(&mut rng), value: 0 }));
         while cards.len() < PLAYERS {
-            cards.push(Card {spaces: make_new_card(&mut rng), value: 0});
+            cards.push(Card { spaces: make_new_card(&mut rng), value: 0 });
         }
 
         let mut balls: [u8; 75] = [
@@ -129,15 +123,13 @@ fn main() {
             16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
             31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,
             46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,
-            61,62,63,64,65,66,67,68,69,70,71,72,73,74,75
+            61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,
         ];
 
         balls.shuffle(&mut rng);
 
         let mut ball_count = 0;
         let mut game_will_end = false;
-
-
 
         for b in balls {
             ball_count += 1;
@@ -146,19 +138,16 @@ fn main() {
 
             ball_histogram[bmin] += 1;
 
-
             for c in &mut cards {
-                if c.spaces.contains(&b) {
-                    let power = u32::try_from(c.spaces.iter().position(|&x| x == b).unwrap()).ok().unwrap();
-                    c.value += 2_u32.pow(power);
-                    for b in &test_bingos {
-                        if *b == (b & c.value){
-                            game_will_end = true;
-                            for t in 0..test_bingos.len(){
-                                if test_bingos[t] == (test_bingos[t] & c.value) { win_kinds[t] += 1 }
-                            }
-                            
-                            //continue 'new_game;
+                if !c.spaces.contains(&b) { continue; }
+
+                let power = u32::try_from(c.spaces.iter().position(|&x| x == b).unwrap()).ok().unwrap();
+                c.value += 2_u32.pow(power);
+                for bingo in &test_bingos {
+                    if *bingo == (bingo & c.value) {
+                        game_will_end = true;
+                        for t in 0..test_bingos.len() {
+                            if test_bingos[t] == (test_bingos[t] & c.value) { win_kinds[t] += 1 }
                         }
                     }
                 }
